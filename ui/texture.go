@@ -2,10 +2,8 @@ package ui
 
 import (
 	"image"
-	"io"
-	"net/http"
-	"os"
-	"path"
+	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-gl/gl/v2.1/gl"
@@ -108,54 +106,21 @@ func (t *Texture) load(path string) int {
 }
 
 func (t *Texture) loadThumbnail(romPath string) image.Image {
-	_, name := path.Split(romPath)
-	name = strings.TrimSuffix(name, ".nes")
-	name = strings.Replace(name, "_", " ", -1)
-	name = strings.Title(name)
-	im := CreateGenericThumbnail(name)
 	hash, err := hashFile(romPath)
 	if err != nil {
-		return im
+		return genericThumbnail(romPath)
 	}
-	filename := thumbnailPath(hash)
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		go t.downloadThumbnail(romPath, hash)
-		return im
-	} else {
-		thumbnail, err := loadPNG(filename)
-		if err != nil {
-			return im
-		}
-		return thumbnail
+	thumbnail, err := loadPNG(thumbnailPath(hash, romPath))
+	if err != nil {
+		return genericThumbnail(romPath)
 	}
+	return thumbnail
 }
 
-func (t *Texture) downloadThumbnail(romPath, hash string) error {
-	url := thumbnailURL(hash)
-	filename := thumbnailPath(hash)
-	dir, _ := path.Split(filename)
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	if _, err := io.Copy(file, resp.Body); err != nil {
-		return err
-	}
-
-	t.ch <- romPath
-
-	return nil
+func genericThumbnail(romPath string) image.Image {
+	name := strings.TrimSuffix(filepath.Base(romPath), ".nes")
+	name = strings.Replace(name, "_", " ", -1)
+	name = strings.Title(name)
+	log.Printf("Error getting thumbnail for %s", filepath.Base(romPath))
+	return CreateGenericThumbnail(name)
 }

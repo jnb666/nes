@@ -1,0 +1,41 @@
+clrmamepro (
+	name "Nintendo - Nintendo Entertainment System"
+	description "Nintendo - Nintendo Entertainment System for RomVault (iNES 1.0 Headers)"
+	category "Standard DatFile"
+	version "2023.11.23"
+	date "2023-11-23"
+	author "libretro"
+	homepage "https://github.com/libretro/libretro-database"
+	url "https://github.com/libretro/libretro-database/blob/master/dat/Nintendo%20-%20Nintendo%20Entertainment%20System.dat"
+	comment "no-intro | www.no-intro.org"
+)
+
+game (
+	name "'89 Dennou Kyuusei Uranai (Japan)"
+	description "'89 Dennou Kyuusei Uranai (Japan)"
+	rom ( name "'89 Dennou Kyuusei Uranai (Japan).nes" size 262160 crc 3577ab04 md5 44091221ff27af8f274f210dec670bb1 sha1 b4cbebec2a49f8bf5454a39424dff567c50d901c )
+)
+
+game (
+	name "0-to-X (World) (Demo) (Aftermarket) (Unl)"
+	description "0-to-X (World) (Demo) (Aftermarket) (Unl)"
+	rom ( name "0-to-X (World) (Demo) (Aftermarket) (Unl).nes" size 24592 crc 853cb053 md5 6c4099738b2de1686027259697d969dd sha1 d87286a726fbce8bb5c08b347911625311718719 )
+)
+
+game (
+	name "10-Yard Fight (Japan) (Rev 1)"
+	description "10-Yard Fight (Japan) (Rev 1)"
+	rom ( name "10-Yard Fight (Japan) (Rev 1).nes" size 24592 crc 83146ecf md5 1e2ec36ed66519dd03a52f1847e9d56d sha1 5b073d8dfffe1fef85a047c2b7b063f9451c9350 )
+)
+
+game (
+	name "10-Yard Fight (Japan)"
+	description "10-Yard Fight (Japan)"
+	rom ( name "10-Yard Fight (Japan).nes" size 24592 crc 44aa3eeb md5 1378270f6cf90095b7fea1e6648503a4 sha1 2a91760c828b26adc765ba9b0322fb770089e391 )
+)
+
+game (
+	name "10-Yard Fight (USA, Europe)"
+	description "10-Yard Fight (USA, Europe)"
+	rom ( name "10-Yard Fight (USA, Europe).nes" size 40976 crc c986cda2 md5 7b1d38579ede25e20b3aaf870be69c42 sha1 67f60e1d139dd85baef455b3b1228fbb5059bdaa )
+)

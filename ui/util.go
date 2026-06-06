@@ -11,44 +11,40 @@ import (
 	"image/png"
 	"log"
 	"os"
-	"os/user"
 	"path"
+	"path/filepath"
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/jnb666/nes/nes"
 )
 
-var homeDir string
+var homeDir = getHomeDir()
 
-func init() {
-	u, err := user.Current()
+func getHomeDir() string {
+	dir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatalln(err)
 	}
-	homeDir = u.HomeDir
+	return dir
 }
 
-func thumbnailURL(hash string) string {
-	return "http://www.michaelfogleman.com/static/nes/" + hash + ".png"
-}
-
-func thumbnailPath(hash string) string {
-	return homeDir + "/.nes/thumbnail/" + hash + ".png"
+func thumbnailPath(hash, romPath string) string {
+	return filepath.Join(filepath.Dir(romPath), "thumbnails", hash+".png")
 }
 
 func sramPath(hash string, snapshot int) string {
 	if snapshot >= 0 {
-		return fmt.Sprintf("%s/.nes/sram/%s-%d.dat", homeDir, hash, snapshot)
+		return filepath.Join(homeDir, ".nes", "sram", fmt.Sprintf("%s-%d.dat", hash, snapshot))
 	}
-	return fmt.Sprintf("%s/.nes/sram/%s.dat", homeDir, hash)
+	return filepath.Join(homeDir, ".nes", "sram", hash+".dat")
 }
 
 func savePath(hash string, snapshot int) string {
 	if snapshot >= 0 {
-		return fmt.Sprintf("%s/.nes/save/%s-%d.dat", homeDir, hash, snapshot)
+		return filepath.Join(homeDir, ".nes", "save", fmt.Sprintf("%s-%d.dat", hash, snapshot))
 	}
-	return fmt.Sprintf("%s/.nes/save/%s.dat", homeDir, hash)
+	return filepath.Join(homeDir, ".nes", "save", hash+".dat")
 }
 
 func readKey(window *glfw.Window, key glfw.Key) bool {

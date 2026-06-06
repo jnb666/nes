@@ -1,0 +1,3 @@
+[submodule "thumbnails/libretro_thumbnails"]
+	path = thumbnails/libretro_thumbnails
+	url = https://github.com/libretro-thumbnails/Nintendo_-_Nintendo_Entertainment_System.git
