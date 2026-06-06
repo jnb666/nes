@@ -1,9 +1,11 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 
 	"github.com/jnb666/nes/ui"
@@ -11,11 +13,22 @@ import (
 
 func main() {
 	log.SetFlags(0)
+	scale := flag.Int("scale", defaultScale(), "set pixel scaling")
+	flag.Parse()
 	paths := getPaths()
 	if len(paths) == 0 {
 		log.Fatalln("no rom files specified or found")
 	}
-	ui.Run(paths)
+	ui.Run(paths, *scale)
+}
+
+// assume HiDPI - on MacOS it is already taken into account
+func defaultScale() int {
+	if runtime.GOOS == "darwin" {
+		return 3
+	} else {
+		return 6
+	}
 }
 
 func getPaths() []string {

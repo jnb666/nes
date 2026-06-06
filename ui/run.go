@@ -12,7 +12,6 @@ import (
 const (
 	width  = 256
 	height = 240
-	scale  = 3
 	title  = "NES"
 )
 
@@ -21,7 +20,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func Run(paths []string) {
+func Run(paths []string, scale int) {
 	// initialize audio
 	portaudio.Initialize()
 	defer portaudio.Terminate()
