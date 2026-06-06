@@ -1,14 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
-	"github.com/fogleman/nes/nes"
+	"github.com/jnb666/nes/nes"
 )
 
 func testRom(path string) (err error) {
@@ -26,12 +26,13 @@ func testRom(path string) (err error) {
 }
 
 func main() {
-	args := os.Args[1:]
-	if len(args) != 1 {
-		log.Fatalln("Usage: go run util/roms.go roms_directory")
+	failedDir := flag.String("failed", "", "optionally move unsupported roms to this directory")
+	flag.Parse()
+	if flag.NArg() == 0 {
+		log.Fatalln("Usage: go run util/roms.go [-failed dir] roms_directory")
 	}
-	dir := args[0]
-	infos, err := ioutil.ReadDir(dir)
+	dir := flag.Arg(0)
+	infos, err := os.ReadDir(dir)
 	if err != nil {
 		panic(err)
 	}
@@ -40,13 +41,18 @@ func main() {
 		if !strings.HasSuffix(name, ".nes") {
 			continue
 		}
-		name = path.Join(dir, name)
-		err := testRom(name)
+		file := filepath.Join(dir, name)
+		err := testRom(file)
 		if err == nil {
 			fmt.Println("OK  ", name)
 		} else {
-			fmt.Println("FAIL", name)
-			fmt.Println(err)
+			fmt.Printf("FAIL %-60s %s\n", name, err)
+			if failedDir != nil {
+				err := os.Rename(file, filepath.Join(*failedDir, name))
+				if err != nil {
+					panic(err)
+				}
+			}
 		}
 	}
 }

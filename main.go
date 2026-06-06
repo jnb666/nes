@@ -1,13 +1,12 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"strings"
 
-	"github.com/fogleman/nes/ui"
+	"github.com/jnb666/nes/ui"
 )
 
 func main() {
@@ -32,7 +31,7 @@ func getPaths() []string {
 		return nil
 	}
 	if info.IsDir() {
-		infos, err := ioutil.ReadDir(arg)
+		infos, err := os.ReadDir(arg)
 		if err != nil {
 			return nil
 		}

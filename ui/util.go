@@ -9,15 +9,14 @@ import (
 	"image/draw"
 	"image/gif"
 	"image/png"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
 	"path"
 
-	"github.com/fogleman/nes/nes"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/jnb666/nes/nes"
 )
 
 var homeDir string
@@ -122,7 +121,7 @@ func combineButtons(a, b [8]bool) [8]bool {
 }
 
 func hashFile(path string) (string, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -150,7 +149,7 @@ func setTexture(im *image.RGBA) {
 
 func copyImage(src image.Image) *image.RGBA {
 	dst := image.NewRGBA(src.Bounds())
-	draw.Draw(dst, dst.Rect, src, image.ZP, draw.Src)
+	draw.Draw(dst, dst.Rect, src, image.Point{}, draw.Src)
 	return dst
 }
 
@@ -183,7 +182,7 @@ func saveGIF(path string, frames []image.Image) error {
 			continue
 		}
 		dst := image.NewPaletted(src.Bounds(), palette)
-		draw.Draw(dst, dst.Rect, src, image.ZP, draw.Src)
+		draw.Draw(dst, dst.Rect, src, image.Point{}, draw.Src)
 		g.Image = append(g.Image, dst)
 		g.Delay = append(g.Delay, 5)
 	}

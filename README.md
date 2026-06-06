@@ -1,6 +1,6 @@
 ### Summary
 
-This is an NES emulator written in Go.
+This is a fork of the excellent NES emulator written by Michael Fogleman in Go.
 
 ### Screenshots
 
@@ -95,5 +95,5 @@ Interested in writing your own emulator? Curious about the NES internals? Here
 are some good resources:
 
 * [NES Documentation (PDF)](http://nesdev.com/NESDoc.pdf)
-* [NES Reference Guide (Wiki)](http://wiki.nesdev.com/w/index.php/NES_reference_guide)
-* [6502 CPU Reference](http://www.obelisk.me.uk/6502/reference.html)
+* [NES Reference Guide (Wiki)](https://www.nesdev.org/wiki/NES_reference_guide)
+* [6502 CPU Reference](https://www.nesdev.org/obelisk-6502-guide/reference.html)

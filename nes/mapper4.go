@@ -127,9 +127,9 @@ func (m *Mapper4) writeRegister(address uint16, value byte) {
 		m.writeIRQLatch(value)
 	case address <= 0xDFFF && address%2 == 1:
 		m.writeIRQReload(value)
-	case address <= 0xFFFF && address%2 == 0:
+	case address%2 == 0:
 		m.writeIRQDisable(value)
-	case address <= 0xFFFF && address%2 == 1:
+	case address%2 == 1:
 		m.writeIRQEnable(value)
 	}
 }
