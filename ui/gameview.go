@@ -3,25 +3,22 @@ package ui
 import (
 	"image"
 
-	"github.com/go-gl/gl/v2.1/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/Zyko0/go-sdl3/sdl"
 	"github.com/jnb666/nes/nes"
 )
-
-const padding = 0
 
 type GameView struct {
 	director *Director
 	console  *nes.Console
 	title    string
 	hash     string
-	texture  uint32
+	texture  *sdl.Texture
 	record   bool
 	frames   []image.Image
 }
 
 func NewGameView(director *Director, console *nes.Console, title, hash string) View {
-	texture := createTexture()
+	texture := createTexture(director.renderer, console.Buffer().Rect.Dx(), console.Buffer().Rect.Dy(), sdl.TEXTUREACCESS_STREAMING)
 	return &GameView{director, console, title, hash, texture, false, nil}
 }
 
@@ -52,16 +49,14 @@ func (view *GameView) save(snapshot int) {
 }
 
 func (view *GameView) Enter() {
-	gl.ClearColor(0, 0, 0, 1)
+	view.director.renderer.SetDrawColor(0, 0, 0, 255)
 	view.director.SetTitle(view.title)
 	view.console.SetAudioChannel(view.director.audio.channel)
-	view.console.SetAudioSampleRate(view.director.audio.sampleRate)
-	view.director.window.SetKeyCallback(view.onKey)
+	view.console.SetAudioSampleRate(AudioSampleRate)
 	view.load(-1)
 }
 
 func (view *GameView) Exit() {
-	view.director.window.SetKeyCallback(nil)
 	view.console.SetAudioChannel(nil)
 	view.console.SetAudioSampleRate(0)
 	view.save(-1)
@@ -71,86 +66,60 @@ func (view *GameView) Update(t, dt float64) {
 	if dt > 1 {
 		dt = 0
 	}
-	window := view.director.window
 	console := view.console
-	if joystickReset(glfw.Joystick1) {
+	joysticks := view.director.joysticks
+	if len(joysticks) >= 1 && joystickReset(joysticks[0].dev) {
 		view.director.ShowMenu()
 	}
-	if joystickReset(glfw.Joystick2) {
+	if len(joysticks) >= 2 && joystickReset(joysticks[1].dev) {
 		view.director.ShowMenu()
 	}
-	if readKey(window, glfw.KeyEscape) {
+	if readKey(sdl.SCANCODE_ESCAPE) {
 		view.director.ShowMenu()
 	}
-	updateControllers(window, console)
+
+	turbo := console.PPU.Frame%6 < 3
+	j1 := readKeys(turbo)
+	if len(joysticks) >= 1 {
+		j1 = combineButtons(readJoystick(joysticks[0].dev, turbo), j1)
+	}
+	console.SetButtons1(j1)
+	if len(joysticks) >= 2 {
+		console.SetButtons2(readJoystick(joysticks[1].dev, turbo))
+	}
+
 	console.StepSeconds(dt)
-	gl.BindTexture(gl.TEXTURE_2D, view.texture)
-	setTexture(console.Buffer())
-	drawBuffer(view.director.window)
-	gl.BindTexture(gl.TEXTURE_2D, 0)
+	setTexture(view.texture, view.console.Buffer())
+	view.director.renderer.RenderTexture(view.texture, nil, nil)
 	if view.record {
 		view.frames = append(view.frames, copyImage(console.Buffer()))
 	}
 }
 
-func (view *GameView) onKey(window *glfw.Window,
-	key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
-	if action == glfw.Press {
-		if key >= glfw.Key0 && key <= glfw.Key9 {
-			snapshot := int(key - glfw.Key0)
-			if mods&glfw.ModShift == 0 {
+func (view *GameView) OnKey(ev *sdl.KeyboardEvent) {
+	switch ev.Key {
+	case sdl.K_SPACE:
+		screenshot(view.console.Buffer())
+	case sdl.K_R:
+		view.console.Reset()
+	case sdl.K_TAB:
+		if view.record {
+			view.record = false
+			animation(view.frames)
+			view.frames = nil
+		} else {
+			view.record = true
+		}
+	default:
+		if ev.Key >= sdl.K_0 && ev.Key <= sdl.K_9 {
+			snapshot := int(ev.Key - sdl.K_9)
+			if ev.Mod&(sdl.KMOD_LSHIFT|sdl.KMOD_RSHIFT) != 0 {
 				view.load(snapshot)
 			} else {
 				view.save(snapshot)
 			}
 		}
-		switch key {
-		case glfw.KeySpace:
-			screenshot(view.console.Buffer())
-		case glfw.KeyR:
-			view.console.Reset()
-		case glfw.KeyTab:
-			if view.record {
-				view.record = false
-				animation(view.frames)
-				view.frames = nil
-			} else {
-				view.record = true
-			}
-		}
 	}
 }
 
-func drawBuffer(window *glfw.Window) {
-	w, h := window.GetFramebufferSize()
-	s1 := float32(w) / 256
-	s2 := float32(h) / 240
-	f := float32(1 - padding)
-	var x, y float32
-	if s1 >= s2 {
-		x = f * s2 / s1
-		y = f
-	} else {
-		x = f
-		y = f * s1 / s2
-	}
-	gl.Begin(gl.QUADS)
-	gl.TexCoord2f(0, 1)
-	gl.Vertex2f(-x, -y)
-	gl.TexCoord2f(1, 1)
-	gl.Vertex2f(x, -y)
-	gl.TexCoord2f(1, 0)
-	gl.Vertex2f(x, y)
-	gl.TexCoord2f(0, 0)
-	gl.Vertex2f(-x, y)
-	gl.End()
-}
-
-func updateControllers(window *glfw.Window, console *nes.Console) {
-	turbo := console.PPU.Frame%6 < 3
-	k1 := readKeys(window, turbo)
-	j1 := readJoystick(glfw.Joystick1, turbo)
-	j2 := readJoystick(glfw.Joystick2, turbo)
-	console.SetButtons1(combineButtons(k1, j1))
-	console.SetButtons2(j2)
-}
+func (view *GameView) OnText(ev *sdl.TextInputEvent) {}

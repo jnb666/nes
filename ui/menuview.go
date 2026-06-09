@@ -4,8 +4,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/go-gl/gl/v2.1/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/Zyko0/go-sdl3/sdl"
 	"github.com/jnb666/nes/nes"
 )
 
@@ -31,20 +30,19 @@ type MenuView struct {
 }
 
 func NewMenuView(director *Director, paths []string) View {
-	view := MenuView{}
-	view.director = director
-	view.paths = paths
-	view.texture = NewTexture()
-	return &view
+	return &MenuView{director: director, paths: paths, texture: NewTexture(director.renderer)}
 }
 
 func (view *MenuView) checkButtons() {
-	window := view.director.window
-	k1 := readKeys(window, false)
-	j1 := readJoystick(glfw.Joystick1, false)
-	j2 := readJoystick(glfw.Joystick2, false)
-	buttons := combineButtons(combineButtons(j1, j2), k1)
-	now := glfw.GetTime()
+	buttons := readKeys(false)
+	joysticks := view.director.joysticks
+	if len(joysticks) >= 1 {
+		buttons = combineButtons(readJoystick(joysticks[0].dev, false), buttons)
+	}
+	if len(joysticks) >= 2 {
+		buttons = combineButtons(readJoystick(joysticks[1].dev, false), buttons)
+	}
+	now := getTime()
 	for i := range buttons {
 		if buttons[i] && !view.buttons[i] {
 			view.times[i] = now + initialDelay
@@ -72,7 +70,7 @@ func (view *MenuView) onPress(index int) {
 	default:
 		return
 	}
-	view.t = glfw.GetTime()
+	view.t = getTime()
 }
 
 func (view *MenuView) onRelease(index int) {
@@ -90,13 +88,15 @@ func (view *MenuView) onSelect() {
 	view.director.PlayGame(view.paths[index])
 }
 
-func (view *MenuView) onChar(window *glfw.Window, char rune) {
-	now := glfw.GetTime()
+func (view *MenuView) OnKey(ev *sdl.KeyboardEvent) {}
+
+func (view *MenuView) OnText(ev *sdl.TextInputEvent) {
+	now := getTime()
 	if now > view.typeTime {
 		view.typeBuffer = ""
 	}
 	view.typeTime = now + typeDelay
-	view.typeBuffer = strings.ToLower(view.typeBuffer + string(char))
+	view.typeBuffer += strings.ToLower(ev.Text)
 	for index, p := range view.paths {
 		_, p = path.Split(strings.ToLower(p))
 		if p >= view.typeBuffer {
@@ -114,22 +114,20 @@ func (view *MenuView) highlight(index int) {
 }
 
 func (view *MenuView) Enter() {
-	gl.ClearColor(0.333, 0.333, 0.333, 1)
 	view.director.SetTitle("Select Game")
-	view.director.window.SetCharCallback(view.onChar)
+	view.director.window.StartTextInput()
 }
 
 func (view *MenuView) Exit() {
-	view.director.window.SetCharCallback(nil)
+	view.director.window.StopTextInput()
 }
 
 func (view *MenuView) Update(t, dt float64) {
 	view.checkButtons()
-	view.texture.Purge()
-	window := view.director.window
-	w, h := window.GetFramebufferSize()
-	sx := 256 + margin*2
-	sy := 240 + margin*2
+	width, height, _ := view.director.window.SizeInPixels()
+	w, h := int(width), int(height)
+	const sx = 256 + margin*2
+	const sy = 240 + margin*2
 	nx := (w - border*2) / sx
 	ny := (h - border*2) / sy
 	ox := (w-nx*sx)/2 + margin
@@ -143,9 +141,9 @@ func (view *MenuView) Update(t, dt float64) {
 	view.nx = nx
 	view.ny = ny
 	view.clampSelection()
-	gl.PushMatrix()
-	gl.Ortho(0, float64(w), float64(h), 0, -1, 1)
-	view.texture.Bind()
+
+	view.director.renderer.SetDrawColor(85, 85, 85, 255)
+	view.director.renderer.Clear()
 	for j := 0; j < ny; j++ {
 		for i := 0; i < nx; i++ {
 			x := float32(ox + i*sx)
@@ -156,16 +154,14 @@ func (view *MenuView) Update(t, dt float64) {
 			}
 			path := view.paths[index]
 			tx, ty, tw, th := view.texture.Lookup(path)
-			drawThumbnail(x, y, tx, ty, tw, th)
+			drawThumbnail(view.director.renderer, view.texture.texture, x, y, tx, ty, tw, th)
 		}
 	}
-	view.texture.Unbind()
 	if int((t-view.t)*4)%2 == 0 {
 		x := float32(ox + view.i*sx)
 		y := float32(oy + view.j*sy)
-		drawSelection(x, y, 8, 4)
+		drawSelection(view.director.renderer, x, y, 8)
 	}
-	gl.PopMatrix()
 }
 
 func (view *MenuView) clampSelection() {
@@ -213,38 +209,13 @@ func (view *MenuView) clampScroll(wrap bool) {
 	}
 }
 
-func drawThumbnail(x, y, tx, ty, tw, th float32) {
-	sx := x + 4
-	sy := y + 4
-	gl.Disable(gl.TEXTURE_2D)
-	gl.Color3f(0.2, 0.2, 0.2)
-	gl.Begin(gl.QUADS)
-	gl.Vertex2f(sx, sy)
-	gl.Vertex2f(sx+256, sy)
-	gl.Vertex2f(sx+256, sy+240)
-	gl.Vertex2f(sx, sy+240)
-	gl.End()
-	gl.Enable(gl.TEXTURE_2D)
-	gl.Color3f(1, 1, 1)
-	gl.Begin(gl.QUADS)
-	gl.TexCoord2f(tx, ty)
-	gl.Vertex2f(x, y)
-	gl.TexCoord2f(tx+tw, ty)
-	gl.Vertex2f(x+256, y)
-	gl.TexCoord2f(tx+tw, ty+th)
-	gl.Vertex2f(x+256, y+240)
-	gl.TexCoord2f(tx, ty+th)
-	gl.Vertex2f(x, y+240)
-	gl.End()
+func drawThumbnail(r *sdl.Renderer, tex *sdl.Texture, x, y, tx, ty, tw, th float32) {
+	r.SetDrawColor(51, 51, 51, 255)
+	r.RenderFillRect(&sdl.FRect{X: x + 4, Y: y + 4, W: 256, H: 240})
+	r.RenderTexture(tex, &sdl.FRect{X: tx, Y: ty, W: tw, H: th}, &sdl.FRect{X: x, Y: y, W: 256, H: 240})
 }
 
-func drawSelection(x, y, p, w float32) {
-	gl.LineWidth(w)
-	gl.Begin(gl.LINE_STRIP)
-	gl.Vertex2f(x-p, y-p)
-	gl.Vertex2f(x+256+p, y-p)
-	gl.Vertex2f(x+256+p, y+240+p)
-	gl.Vertex2f(x-p, y+240+p)
-	gl.Vertex2f(x-p, y-p)
-	gl.End()
+func drawSelection(r *sdl.Renderer, x, y, p float32) {
+	r.SetDrawColor(255, 255, 255, 255)
+	r.RenderRect(&sdl.FRect{X: x - p, Y: y - p, W: 256 + 2*p, H: 240 + 2*p})
 }

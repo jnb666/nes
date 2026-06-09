@@ -1,5 +1,0 @@
-TODO
-====
-- audio is jittery
-- use SDL3 instead of glfw, opengl and portaudio
-- test on RPI

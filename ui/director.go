@@ -2,9 +2,9 @@ package ui
 
 import (
 	"log"
+	"slices"
 
-	"github.com/go-gl/gl/v2.1/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/Zyko0/go-sdl3/sdl"
 	"github.com/jnb666/nes/nes"
 )
 
@@ -12,19 +12,29 @@ type View interface {
 	Enter()
 	Exit()
 	Update(t, dt float64)
+	OnKey(ev *sdl.KeyboardEvent)
+	OnText(ev *sdl.TextInputEvent)
 }
 
 type Director struct {
-	window    *glfw.Window
+	window    *sdl.Window
+	renderer  *sdl.Renderer
 	audio     *Audio
+	joysticks []Joystick
 	view      View
 	menuView  View
 	timestamp float64
 }
 
-func NewDirector(window *glfw.Window, audio *Audio) *Director {
+type Joystick struct {
+	id  sdl.JoystickID
+	dev *sdl.Joystick
+}
+
+func NewDirector(window *sdl.Window, renderer *sdl.Renderer, audio *Audio) *Director {
 	director := Director{}
 	director.window = window
+	director.renderer = renderer
 	director.audio = audio
 	return &director
 }
@@ -41,12 +51,12 @@ func (d *Director) SetView(view View) {
 	if d.view != nil {
 		d.view.Enter()
 	}
-	d.timestamp = glfw.GetTime()
+	d.timestamp = getTime()
 }
 
 func (d *Director) Step() {
-	gl.Clear(gl.COLOR_BUFFER_BIT)
-	timestamp := glfw.GetTime()
+	d.renderer.Clear()
+	timestamp := getTime()
 	dt := timestamp - d.timestamp
 	d.timestamp = timestamp
 	if d.view != nil {
@@ -65,10 +75,9 @@ func (d *Director) Start(paths []string) {
 }
 
 func (d *Director) Run() {
-	for !d.window.ShouldClose() {
+	for d.PollEvents() {
 		d.Step()
-		d.window.SwapBuffers()
-		glfw.PollEvents()
+		d.renderer.Present()
 	}
 	d.SetView(nil)
 }
@@ -87,4 +96,45 @@ func (d *Director) PlayGame(path string) {
 
 func (d *Director) ShowMenu() {
 	d.SetView(d.menuView)
+}
+
+func (d *Director) PollEvents() bool {
+	var event sdl.Event
+	for sdl.PollEvent(&event) {
+		switch event.Type {
+		case sdl.EVENT_QUIT:
+			return false
+
+		case sdl.EVENT_KEY_DOWN:
+			d.view.OnKey(event.KeyboardEvent())
+
+		case sdl.EVENT_TEXT_INPUT:
+			d.menuView.OnText(event.TextInputEvent())
+
+		case sdl.EVENT_JOYSTICK_ADDED:
+			ev := event.JoyDeviceEvent()
+			js := must(ev.Which.OpenJoystick())
+			log.Printf("added joystick %d: %s", ev.Which, must(js.Name()))
+			d.joysticks = append(d.joysticks, Joystick{id: ev.Which, dev: js})
+
+		case sdl.EVENT_JOYSTICK_REMOVED:
+			ev := event.JoyDeviceEvent()
+			ix := slices.IndexFunc(d.joysticks, func(j Joystick) bool { return j.id == ev.Which })
+			if ix > 0 {
+				d.joysticks[ix].dev.Close()
+				log.Printf("removed joystick %d", ev.Which)
+				d.joysticks = slices.Delete(d.joysticks, ix, ix+1)
+			} else {
+				log.Printf("Error: got joystick removed event for %d but it was not previously added", ev.Which)
+			}
+		}
+	}
+	return true
+}
+
+func must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
 }

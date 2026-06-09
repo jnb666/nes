@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-gl/gl/v2.1/gl"
+	"github.com/Zyko0/go-sdl3/sdl"
 )
 
 const textureSize = 4096
@@ -14,46 +14,18 @@ const textureDim = textureSize / 256
 const textureCount = textureDim * textureDim
 
 type Texture struct {
-	texture uint32
+	texture *sdl.Texture
 	lookup  map[string]int
 	reverse [textureCount]string
 	access  [textureCount]int
 	counter int
-	ch      chan string
 }
 
-func NewTexture() *Texture {
-	texture := createTexture()
-	gl.BindTexture(gl.TEXTURE_2D, texture)
-	gl.TexImage2D(
-		gl.TEXTURE_2D, 0, gl.RGBA,
-		textureSize, textureSize,
-		0, gl.RGBA, gl.UNSIGNED_BYTE, nil)
-	gl.BindTexture(gl.TEXTURE_2D, 0)
-	t := Texture{}
-	t.texture = texture
-	t.lookup = make(map[string]int)
-	t.ch = make(chan string, 1024)
-	return &t
-}
-
-func (t *Texture) Purge() {
-	for {
-		select {
-		case path := <-t.ch:
-			delete(t.lookup, path)
-		default:
-			return
-		}
+func NewTexture(renderer *sdl.Renderer) *Texture {
+	return &Texture{
+		texture: createTexture(renderer, textureSize, textureSize, sdl.TEXTUREACCESS_STATIC),
+		lookup:  make(map[string]int),
 	}
-}
-
-func (t *Texture) Bind() {
-	gl.BindTexture(gl.TEXTURE_2D, t.texture)
-}
-
-func (t *Texture) Unbind() {
-	gl.BindTexture(gl.TEXTURE_2D, 0)
 }
 
 func (t *Texture) Lookup(path string) (x, y, dx, dy float32) {
@@ -82,10 +54,10 @@ func (t *Texture) lru() int {
 }
 
 func (t *Texture) coord(index int) (x, y, dx, dy float32) {
-	x = float32(index%textureDim) / textureDim
-	y = float32(index/textureDim) / textureDim
-	dx = 1.0 / textureDim
-	dy = dx * 240 / 256
+	x = float32(index%textureDim) * 256
+	y = float32(index/textureDim) * 256
+	dx = 256
+	dy = 240
 	return
 }
 
@@ -99,9 +71,7 @@ func (t *Texture) load(path string) int {
 	y := int32((index / textureDim) * 256)
 	im := copyImage(t.loadThumbnail(path))
 	size := im.Rect.Size()
-	gl.TexSubImage2D(
-		gl.TEXTURE_2D, 0, x, y, int32(size.X), int32(size.Y),
-		gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(im.Pix))
+	t.texture.Update(&sdl.Rect{X: x, Y: y, W: int32(size.X), H: int32(size.Y)}, im.Pix, int32(im.Stride))
 	return index
 }
 

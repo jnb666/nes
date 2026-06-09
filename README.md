@@ -2,37 +2,31 @@
 
 This is a fork of the excellent NES emulator written by Michael Fogleman in Go.
 
+Changes are:
+  - Ported from using glfw/openGL/portaudio to SDL3.
+  - Title screens imported from libretro project which has a very complete collection.
+
 ### Screenshots
 
 ![Screenshots](http://i.imgur.com/vD3FXVh.png)
 
 ### Title Screens
 
-http://www.michaelfogleman.com/static/nes/
+From [libretro-thumbnails](https://github.com/jnb666/nes/tree/master/thumbnails) project.
+Metadata to map from ROM file names to thumbnails is from the [libretro-database](https://github.com/libretro/libretro-database).
 
 ### Dependencies
 
-    github.com/go-gl/gl/v2.1/gl
-    github.com/go-gl/glfw/v3.1/glfw
-    github.com/gordonklaus/portaudio
+    github.com/Zyko0/go-sdl3
 
-The portaudio-go dependency requires PortAudio on your system:
-
-> To build portaudio-go, you must first have the PortAudio development headers
-> and libraries installed. Some systems provide a package for this; e.g., on
-> Ubuntu you would want to run apt-get install portaudio19-dev. On other systems
-> you might have to install from source.
-
-On Mac, you can use homebrew:
-
-    brew install portaudio
+Is a wrapper for the SDL3 shared libraries which can be downloaded from [here](https://github.com/libsdl-org/SDL/releases/latest).
 
 ### Installation
 
 The `go get` command will automatically fetch the dependencies listed above,
 compile the binary and place it in your `$GOPATH/bin` directory.
 
-    go get github.com/fogleman/nes
+    go get github.com/jnb666/nes
 
 ### Usage
 

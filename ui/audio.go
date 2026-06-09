@@ -1,54 +1,66 @@
 package ui
 
-import "github.com/gordonklaus/portaudio"
+import (
+	"errors"
+	"unsafe"
+
+	"github.com/Zyko0/go-sdl3/sdl"
+)
+
+const (
+	AudioSampleRate = 44100
+	AudioBufferSize = 256
+	AudioSampleSize = 2
+)
 
 type Audio struct {
-	stream         *portaudio.Stream
-	sampleRate     float64
-	outputChannels int
-	channel        chan float32
+	stream  *sdl.AudioStream
+	channel chan float32
 }
 
 func NewAudio() *Audio {
 	a := Audio{}
-	a.channel = make(chan float32, 44100)
+	a.channel = make(chan float32, AudioSampleRate)
 	return &a
 }
 
 func (a *Audio) Start() error {
-	host, err := portaudio.DefaultHostApi()
-	if err != nil {
-		return err
+	spec := &sdl.AudioSpec{
+		Format:   sdl.AUDIO_S16,
+		Channels: 1,
+		Freq:     AudioSampleRate,
 	}
-	parameters := portaudio.HighLatencyParameters(nil, host.DefaultOutputDevice)
-	stream, err := portaudio.OpenStream(parameters, a.Callback)
-	if err != nil {
-		return err
+	callback := sdl.NewAudioStreamCallback(a.callback)
+	a.stream = sdl.AUDIO_DEVICE_DEFAULT_PLAYBACK.OpenAudioDeviceStream(spec, callback)
+	if a.stream == nil {
+		return errors.New("error opening default audio stream")
 	}
-	if err := stream.Start(); err != nil {
-		return err
-	}
-	a.stream = stream
-	a.sampleRate = parameters.SampleRate
-	a.outputChannels = parameters.Output.Channels
-	return nil
+	return a.stream.ResumeDevice()
 }
 
 func (a *Audio) Stop() error {
-	return a.stream.Close()
+	a.stream.Destroy()
+	return nil
 }
 
-func (a *Audio) Callback(out []float32) {
-	var output float32
-	for i := range out {
-		if i%a.outputChannels == 0 {
+func (a *Audio) callback(stream *sdl.AudioStream, neededBytes, totalBytes int32) {
+	var buffer [AudioBufferSize]int16
+	needed := int(neededBytes / AudioSampleSize)
+	for needed > 0 {
+		n := min(needed, AudioBufferSize)
+		for i := range n {
 			select {
 			case sample := <-a.channel:
-				output = sample
+				buffer[i] = int16(32767 * sample)
 			default:
-				output = 0
+				buffer[i] = 0
 			}
 		}
-		out[i] = output
+		stream.PutData(asBytes(buffer[:n]))
+		needed -= n
 	}
+}
+
+func asBytes(s []int16) []uint8 {
+	return unsafe.Slice((*uint8)(unsafe.Pointer(&s[0])), len(s)*2)
 }

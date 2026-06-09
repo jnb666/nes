@@ -4,9 +4,7 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/go-gl/gl/v2.1/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
-	"github.com/gordonklaus/portaudio"
+	"github.com/Zyko0/go-sdl3/sdl"
 )
 
 const (
@@ -15,44 +13,47 @@ const (
 	title  = "NES"
 )
 
-func init() {
-	// we need to keep OpenGL calls on a single thread
-	runtime.LockOSThread()
-}
-
 func Run(paths []string, scale int) {
-	// initialize audio
-	portaudio.Initialize()
-	defer portaudio.Terminate()
+	// initialize SDL
+	if err := sdl.LoadLibrary(libraryPath()); err != nil {
+		log.Fatalln(err)
+	}
+	if err := sdl.Init(sdl.INIT_VIDEO | sdl.INIT_AUDIO | sdl.INIT_JOYSTICK); err != nil {
+		log.Fatalln(err)
+	}
+	defer sdl.Quit()
 
+	// initialize audio
 	audio := NewAudio()
 	if err := audio.Start(); err != nil {
 		log.Fatalln(err)
 	}
 	defer audio.Stop()
 
-	// initialize glfw
-	if err := glfw.Init(); err != nil {
-		log.Fatalln(err)
-	}
-	defer glfw.Terminate()
-
 	// create window
-	glfw.WindowHint(glfw.ContextVersionMajor, 2)
-	glfw.WindowHint(glfw.ContextVersionMinor, 1)
-	window, err := glfw.CreateWindow(width*scale, height*scale, title, nil, nil)
+	window, renderer, err := sdl.CreateWindowAndRenderer(title, width*scale, height*scale, sdl.WINDOW_HIGH_PIXEL_DENSITY)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	window.MakeContextCurrent()
-
-	// initialize gl
-	if err := gl.Init(); err != nil {
+	defer window.Destroy()
+	if err = renderer.SetVSync(1); err != nil {
 		log.Fatalln(err)
 	}
-	gl.Enable(gl.TEXTURE_2D)
 
 	// run director
-	director := NewDirector(window, audio)
+	director := NewDirector(window, renderer, audio)
 	director.Start(paths)
+}
+
+func libraryPath() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "SDL3.dll"
+	case "linux", "freebsd":
+		return "libSDL3.so.0"
+	case "darwin":
+		return "/usr/local/lib/libSDL3.dylib"
+	default:
+		return ""
+	}
 }
