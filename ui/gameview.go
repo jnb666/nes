@@ -83,8 +83,11 @@ func (view *GameView) Update(t, dt float64) {
 	}
 	console := view.console
 	joysticks := view.director.joysticks
-	if readKey(sdl.SCANCODE_ESCAPE) || joystickReset(view.director) {
+	if readKey(sdl.SCANCODE_ESCAPE) || joystickExit(view.director) {
 		view.director.ShowMenu()
+	}
+	if joystickReset(view.director) {
+		view.console.Reset()
 	}
 	turbo := console.PPU.Frame%6 < 3
 	j1 := readKeys(turbo)
@@ -97,6 +100,8 @@ func (view *GameView) Update(t, dt float64) {
 	}
 	console.StepSeconds(dt)
 	setTexture(view.texture, view.console.Buffer())
+	view.director.renderer.SetDrawColor(0, 0, 0, 255)
+	view.director.renderer.Clear()
 	view.director.renderer.RenderTexture(view.texture, nil, view.viewport)
 
 	if view.record {

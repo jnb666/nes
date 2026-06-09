@@ -69,6 +69,11 @@ func readKeys(turbo bool) (result [8]bool) {
 }
 
 func joystickReset(d *Director) bool {
+	return d.buttons[0][nes.ButtonSelect] && d.buttons[0][nes.ButtonA] ||
+		d.buttons[1][nes.ButtonSelect] && d.buttons[1][nes.ButtonA]
+}
+
+func joystickExit(d *Director) bool {
 	return d.buttons[0][nes.ButtonSelect] && d.buttons[0][nes.ButtonB] ||
 		d.buttons[1][nes.ButtonSelect] && d.buttons[1][nes.ButtonB]
 }
