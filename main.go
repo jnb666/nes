@@ -14,12 +14,13 @@ import (
 func main() {
 	log.SetFlags(0)
 	scale := flag.Int("scale", defaultScale(), "set pixel scaling")
+	volume := flag.Int("volume", 128, "volume level from 0-255")
 	flag.Parse()
 	paths := getPaths(flag.Args())
 	if len(paths) == 0 {
 		log.Fatalln("no rom files specified or found")
 	}
-	ui.Run(paths, *scale)
+	ui.Run(paths, *scale, *volume)
 }
 
 // assume HiDPI - on MacOS it is already taken into account

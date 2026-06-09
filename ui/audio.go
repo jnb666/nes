@@ -16,12 +16,14 @@ const (
 type Audio struct {
 	stream  *sdl.AudioStream
 	channel chan float32
+	volume  float32
 }
 
-func NewAudio() *Audio {
-	a := Audio{}
-	a.channel = make(chan float32, AudioSampleRate)
-	return &a
+func NewAudio(volume int) *Audio {
+	return &Audio{
+		channel: make(chan float32, AudioSampleRate),
+		volume:  min(max(0, float32(volume)/255), 1),
+	}
 }
 
 func (a *Audio) Start() error {
@@ -51,7 +53,7 @@ func (a *Audio) callback(stream *sdl.AudioStream, neededBytes, totalBytes int32)
 		for i := range n {
 			select {
 			case sample := <-a.channel:
-				buffer[i] = int16(32767 * sample)
+				buffer[i] = int16(32767 * sample * a.volume)
 			default:
 				buffer[i] = 0
 			}

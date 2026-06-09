@@ -13,7 +13,7 @@ const (
 	title  = "NES"
 )
 
-func Run(paths []string, scale int) {
+func Run(paths []string, scale, volume int) {
 	// initialize SDL
 	if err := sdl.LoadLibrary(libraryPath()); err != nil {
 		log.Fatalln(err)
@@ -24,10 +24,10 @@ func Run(paths []string, scale int) {
 	defer sdl.Quit()
 	driver := sdl.GetCurrentVideoDriver()
 	bounds := must(sdl.GetPrimaryDisplay().Bounds())
-	log.Printf("SDL %s %s - display:%dx%d scale:%d", sdl.GetVersion(), driver, bounds.W, bounds.H, scale)
+	log.Printf("SDL %s %s - display:%dx%d scale:%d volume:%d", sdl.GetVersion(), driver, bounds.W, bounds.H, scale, volume)
 
 	// initialize audio
-	audio := NewAudio()
+	audio := NewAudio(volume)
 	if err := audio.Start(); err != nil {
 		log.Fatalln(err)
 	}
