@@ -15,7 +15,7 @@ func main() {
 	log.SetFlags(0)
 	scale := flag.Int("scale", defaultScale(), "set pixel scaling")
 	flag.Parse()
-	paths := getPaths()
+	paths := getPaths(flag.Args())
 	if len(paths) == 0 {
 		log.Fatalln("no rom files specified or found")
 	}
@@ -31,9 +31,8 @@ func defaultScale() int {
 	}
 }
 
-func getPaths() []string {
+func getPaths(args []string) []string {
 	var arg string
-	args := os.Args[1:]
 	if len(args) == 1 {
 		arg = args[0]
 	} else {

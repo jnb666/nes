@@ -68,22 +68,9 @@ func readKeys(turbo bool) (result [8]bool) {
 	return result
 }
 
-func readJoystick(joy *sdl.Joystick, turbo bool) (result [8]bool) {
-	result[nes.ButtonA] = joy.Button(1)
-	result[nes.ButtonB] = joy.Button(0)
-	result[nes.ButtonSelect] = joy.Button(8)
-	result[nes.ButtonStart] = joy.Button(9)
-	axis1 := must(joy.Axis(1))
-	result[nes.ButtonUp] = axis1 < -16384
-	result[nes.ButtonDown] = axis1 > 16384
-	axis0 := must(joy.Axis(0))
-	result[nes.ButtonLeft] = axis0 < -16384
-	result[nes.ButtonRight] = axis0 > 16384
-	return result
-}
-
-func joystickReset(joy *sdl.Joystick) bool {
-	return joy.Button(8) && joy.Button(9)
+func joystickReset(d *Director) bool {
+	return d.buttons[0][nes.ButtonSelect] && d.buttons[0][nes.ButtonB] ||
+		d.buttons[1][nes.ButtonSelect] && d.buttons[1][nes.ButtonB]
 }
 
 func combineButtons(a, b [8]bool) [8]bool {

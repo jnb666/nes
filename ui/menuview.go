@@ -37,10 +37,10 @@ func (view *MenuView) checkButtons() {
 	buttons := readKeys(false)
 	joysticks := view.director.joysticks
 	if len(joysticks) >= 1 {
-		buttons = combineButtons(readJoystick(joysticks[0].dev, false), buttons)
+		buttons = combineButtons(view.director.buttons[0], buttons)
 	}
 	if len(joysticks) >= 2 {
-		buttons = combineButtons(readJoystick(joysticks[1].dev, false), buttons)
+		buttons = combineButtons(view.director.buttons[1], buttons)
 	}
 	now := getTime()
 	for i := range buttons {
@@ -126,12 +126,20 @@ func (view *MenuView) Update(t, dt float64) {
 	view.checkButtons()
 	width, height, _ := view.director.window.SizeInPixels()
 	w, h := int(width), int(height)
-	const sx = 256 + margin*2
-	const sy = 240 + margin*2
-	nx := (w - border*2) / sx
-	ny := (h - border*2) / sy
-	ox := (w-nx*sx)/2 + margin
-	oy := (h-ny*sy)/2 + margin
+	var nx, ny, ox, oy, sx, sy int
+	if h == 480 {
+		sx = 256 + 8
+		sy = 240 + 8
+		nx = 3
+		ny = 2
+	} else {
+		sx = 256 + margin*2
+		sy = 240 + margin*2
+		nx = (w - border*2) / sx
+		ny = (h - border*2) / sy
+		oy = (h-ny*sy)/2 + margin
+	}
+	ox = (w-nx*sx)/2 + margin
 	if nx < 1 {
 		nx = 1
 	}

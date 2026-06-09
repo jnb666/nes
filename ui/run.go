@@ -22,6 +22,9 @@ func Run(paths []string, scale int) {
 		log.Fatalln(err)
 	}
 	defer sdl.Quit()
+	driver := sdl.GetCurrentVideoDriver()
+	bounds := must(sdl.GetPrimaryDisplay().Bounds())
+	log.Printf("SDL %s %s - display:%dx%d scale:%d", sdl.GetVersion(), driver, bounds.W, bounds.H, scale)
 
 	// initialize audio
 	audio := NewAudio()
@@ -31,7 +34,14 @@ func Run(paths []string, scale int) {
 	defer audio.Stop()
 
 	// create window
-	window, renderer, err := sdl.CreateWindowAndRenderer(title, width*scale, height*scale, sdl.WINDOW_HIGH_PIXEL_DENSITY)
+	w, h := width*scale, height*scale
+	opts := sdl.WINDOW_HIGH_PIXEL_DENSITY
+	if driver == "kmsdrm" {
+		w, h = int(bounds.W), int(bounds.H)
+		opts = sdl.WINDOW_FULLSCREEN
+		sdl.HideCursor()
+	}
+	window, renderer, err := sdl.CreateWindowAndRenderer(title, w, h, opts)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -39,6 +49,7 @@ func Run(paths []string, scale int) {
 	if err = renderer.SetVSync(1); err != nil {
 		log.Fatalln(err)
 	}
+	window.Raise()
 
 	// run director
 	director := NewDirector(window, renderer, audio)

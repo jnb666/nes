@@ -8,6 +8,14 @@ import (
 	"github.com/jnb666/nes/nes"
 )
 
+// joystick mapping for https://thepihut.com/products/nes-style-raspberry-pi-compatible-usb-gamepad-controller
+var JoystickButtons = map[uint8]uint16{
+	8: nes.ButtonSelect,
+	9: nes.ButtonStart,
+	1: nes.ButtonA,
+	0: nes.ButtonB,
+}
+
 type View interface {
 	Enter()
 	Exit()
@@ -21,6 +29,7 @@ type Director struct {
 	renderer  *sdl.Renderer
 	audio     *Audio
 	joysticks []Joystick
+	buttons   [2][8]bool
 	view      View
 	menuView  View
 	timestamp float64
@@ -109,7 +118,27 @@ func (d *Director) PollEvents() bool {
 			d.view.OnKey(event.KeyboardEvent())
 
 		case sdl.EVENT_TEXT_INPUT:
-			d.menuView.OnText(event.TextInputEvent())
+			d.view.OnText(event.TextInputEvent())
+
+		case sdl.EVENT_JOYSTICK_AXIS_MOTION:
+			ev := event.JoyAxisEvent()
+			if controller, ok := d.joystick(ev.Which); ok {
+				if ev.Axis == 1 {
+					d.buttons[controller][nes.ButtonUp] = ev.Value < -16384
+					d.buttons[controller][nes.ButtonDown] = ev.Value > 16384
+				} else {
+					d.buttons[controller][nes.ButtonLeft] = ev.Value < -16384
+					d.buttons[controller][nes.ButtonRight] = ev.Value > 16384
+				}
+			}
+
+		case sdl.EVENT_JOYSTICK_BUTTON_DOWN, sdl.EVENT_JOYSTICK_BUTTON_UP:
+			ev := event.JoyButtonEvent()
+			if controller, ok := d.joystick(ev.Which); ok {
+				if id, ok := JoystickButtons[ev.Button]; ok {
+					d.buttons[controller][id] = ev.Down
+				}
+			}
 
 		case sdl.EVENT_JOYSTICK_ADDED:
 			ev := event.JoyDeviceEvent()
@@ -130,6 +159,15 @@ func (d *Director) PollEvents() bool {
 		}
 	}
 	return true
+}
+
+func (d *Director) joystick(id sdl.JoystickID) (int, bool) {
+	ix := slices.IndexFunc(d.joysticks, func(j Joystick) bool { return j.id == id })
+	if ix >= 0 && ix < 2 {
+		return ix, true
+	}
+	log.Printf("Joystick event with invalid ID %d", id)
+	return 0, false
 }
 
 func must[T any](v T, err error) T {

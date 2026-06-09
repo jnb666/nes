@@ -13,13 +13,28 @@ type GameView struct {
 	title    string
 	hash     string
 	texture  *sdl.Texture
+	viewport *sdl.FRect
 	record   bool
 	frames   []image.Image
 }
 
 func NewGameView(director *Director, console *nes.Console, title, hash string) View {
-	texture := createTexture(director.renderer, console.Buffer().Rect.Dx(), console.Buffer().Rect.Dy(), sdl.TEXTUREACCESS_STREAMING)
-	return &GameView{director, console, title, hash, texture, false, nil}
+	width, height, _ := director.window.SizeInPixels()
+	w, h := float32(width), float32(height)
+	texw, texh := console.Buffer().Rect.Dx(), console.Buffer().Rect.Dy()
+	aspect := float32(texw) / float32(texh)
+	var viewport sdl.FRect
+	if w/h > aspect {
+		viewport.W = h * aspect
+		viewport.H = h
+		viewport.X = (w - viewport.W) / 2
+	} else {
+		viewport.W = w
+		viewport.H = w / aspect
+		viewport.Y = (h - viewport.H) / 2
+	}
+	texture := createTexture(director.renderer, texw, texh, sdl.TEXTUREACCESS_STREAMING)
+	return &GameView{director, console, title, hash, texture, &viewport, false, nil}
 }
 
 func (view *GameView) load(snapshot int) {
@@ -68,29 +83,22 @@ func (view *GameView) Update(t, dt float64) {
 	}
 	console := view.console
 	joysticks := view.director.joysticks
-	if len(joysticks) >= 1 && joystickReset(joysticks[0].dev) {
+	if readKey(sdl.SCANCODE_ESCAPE) || joystickReset(view.director) {
 		view.director.ShowMenu()
 	}
-	if len(joysticks) >= 2 && joystickReset(joysticks[1].dev) {
-		view.director.ShowMenu()
-	}
-	if readKey(sdl.SCANCODE_ESCAPE) {
-		view.director.ShowMenu()
-	}
-
 	turbo := console.PPU.Frame%6 < 3
 	j1 := readKeys(turbo)
 	if len(joysticks) >= 1 {
-		j1 = combineButtons(readJoystick(joysticks[0].dev, turbo), j1)
+		j1 = combineButtons(view.director.buttons[0], j1)
 	}
 	console.SetButtons1(j1)
 	if len(joysticks) >= 2 {
-		console.SetButtons2(readJoystick(joysticks[1].dev, turbo))
+		console.SetButtons2(view.director.buttons[1])
 	}
-
 	console.StepSeconds(dt)
 	setTexture(view.texture, view.console.Buffer())
-	view.director.renderer.RenderTexture(view.texture, nil, nil)
+	view.director.renderer.RenderTexture(view.texture, nil, view.viewport)
+
 	if view.record {
 		view.frames = append(view.frames, copyImage(console.Buffer()))
 	}
